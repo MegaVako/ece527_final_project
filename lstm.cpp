@@ -1,4 +1,4 @@
-#include <stdint.h>
+//#include <stdint.h>
 
 #include "ap_int.h"
 #include "ap_fixed.h"
@@ -47,7 +47,7 @@ void hidden_to_hidden_dot_product(t_feature h[HIDDEN_FEATURE_D], t_feature U[HID
     {
         for (int j = 0; j < HIDDEN_FEATURE_D; ++j)
         {
-            output[j] += h[i][j] * U[i][j];
+            output[i] += h[i] * U[i][j];
         }
     }
 }
@@ -130,14 +130,19 @@ static void LSTM_cell(t_feature input[INPUT_FEATURE_D],
     t_feature output_f[HIDDEN_FEATURE_D];
     t_feature output_g[HIDDEN_FEATURE_D];
     t_feature output_o[HIDDEN_FEATURE_D];
+
+//    unified_gate(t_feature W[INPUT_FEATURE_D][HIDDEN_FEATURE_D], t_feature x[INPUT_FEATURE_D],
+//                      t_feature U[HIDDEN_FEATURE_D][HIDDEN_FEATURE_D], t_feature h[HIDDEN_FEATURE_D],
+//                      t_feature bias[HIDDEN_FEATURE_D],
+//                      t_feature output[HIDDEN_FEATURE_D])
     // input gate
-    unified_gate(weight_matrix_xi, input, weight_matrix_hi, hidden_state, bias_i);
+    unified_gate(weight_matrix_xi, input, weight_matrix_hi, hidden_state, bias_i, output_i);
     // forget gate
-    unified_gate(weight_matrix_xf, input, weight_matrix_hf, hidden_state, bias_f);
+    unified_gate(weight_matrix_xf, input, weight_matrix_hf, hidden_state, bias_f, output_f);
     // g gate
-    g_gate(weight_matrix_xg, input, weight_matrix_hg, hidden_state, bias_c);
+    g_gate(weight_matrix_xg, input, weight_matrix_hg, hidden_state, bias_c, output_g);
     // output gate
-    unified_gate(weight_matrix_xo, input, weight_matrix_ho, hidden_state, bias_o);
+    unified_gate(weight_matrix_xo, input, weight_matrix_ho, hidden_state, bias_o, output_o);
     // cell out
     cell_out(output_f, cell_state, output_i, output_g, next_cell_state);
     // next_hidden state
@@ -163,16 +168,28 @@ int wrapper_flow(t_feature input_seq[INPUT_SEQUENTIAL_D][INPUT_FEATURE_D],
 {
 
     t_feature cell_state_seq[INPUT_SEQUENTIAL_D][HIDDEN_FEATURE_D];
-#pragma HLS dataflow
-#pragma HLS array_partition variable = weight_matrix_f cyclic dim = 1 factor = 32
-#pragma HLS array_partition variable = weight_matrix_o cyclic dim = 1 factor = 32
-#pragma HLS array_partition variable = weight_matrix_c cyclic dim = 1 factor = 32
-#pragma HLS array_partition variable = hidden_state cyclic dim = 1 factor = 32
+    t_feature dummy_hidden[32] = {0};
+    t_feature dummy_cell[32] = {0};
+//#pragma HLS dataflow
+#pragma HLS array_partition variable = weight_matrix_hf cyclic dim = 2 factor = 32
+#pragma HLS array_partition variable = weight_matrix_xf cyclic dim = 2 factor = 32
+#pragma HLS array_partition variable = weight_matrix_hi cyclic dim = 2 factor = 32
+#pragma HLS array_partition variable = weight_matrix_xi cyclic dim = 2 factor = 32
+#pragma HLS array_partition variable = weight_matrix_ho cyclic dim = 2 factor = 32
+#pragma HLS array_partition variable = weight_matrix_xo cyclic dim = 2 factor = 32
+#pragma HLS array_partition variable = weight_matrix_hg cyclic dim = 2 factor = 32
+#pragma HLS array_partition variable = weight_matrix_xg cyclic dim = 2 factor = 32
+#pragma HLS array_partition variable = hidden_state_seq cyclic dim = 2 factor = 32
+
+#pragma HLS array_partition variable = bias_f complete factor = 32
+#pragma HLS array_partition variable = bias_i complete factor = 32
+#pragma HLS array_partition variable = bias_o complete factor = 32
+#pragma HLS array_partition variable = bias_c complete factor = 32
 
     LSTM_cell(
-        input_seq[i],
-        0,
-        0,
+        input_seq[0],
+		dummy_hidden,
+		dummy_cell,
         weight_matrix_hf,
         weight_matrix_xf,
         weight_matrix_hi,
@@ -186,7 +203,7 @@ int wrapper_flow(t_feature input_seq[INPUT_SEQUENTIAL_D][INPUT_FEATURE_D],
         bias_o,
         bias_c,
         hidden_state_seq[0],  // next
-        cell_state_seq[0],    // next
+        cell_state_seq[0]    // next
     );
     for (int i = 1; i < INPUT_SEQUENTIAL_D; i++) {
 #pragma hls UNROLL
@@ -207,7 +224,8 @@ int wrapper_flow(t_feature input_seq[INPUT_SEQUENTIAL_D][INPUT_FEATURE_D],
             bias_o,
             bias_c,
             hidden_state_seq[i],  // next
-            cell_state_seq[i],    // next
+            cell_state_seq[i]    // next
         );
     }
+    return 0;
 }
