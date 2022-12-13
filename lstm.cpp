@@ -170,9 +170,23 @@ int wrapper_flow(t_feature input_seq[INPUT_SEQUENTIAL_D][INPUT_FEATURE_D],
                  t_weight bias_c[HIDDEN_FEATURE_D])
 {
 
+    t_feature input_seq_buf[INPUT_SEQUENTIAL_D][INPUT_FEATURE_D];
     t_feature cell_state_seq[INPUT_SEQUENTIAL_D][HIDDEN_FEATURE_D];
     t_feature dummy_hidden[32] = {0};
     t_feature dummy_cell[32] = {0};
+  
+    t_weight weight_matrix_hf_[HIDDEN_FEATURE_D][HIDDEN_FEATURE_D];
+    t_weight weight_matrix_xf_[INPUT_FEATURE_D][HIDDEN_FEATURE_D];
+    t_weight weight_matrix_hi_[HIDDEN_FEATURE_D][HIDDEN_FEATURE_D];
+    t_weight weight_matrix_xi_[INPUT_FEATURE_D][HIDDEN_FEATURE_D];
+    t_weight weight_matrix_ho_[HIDDEN_FEATURE_D][HIDDEN_FEATURE_D];
+    t_weight weight_matrix_xo_[INPUT_FEATURE_D][HIDDEN_FEATURE_D];
+    t_weight weight_matrix_hg_[HIDDEN_FEATURE_D][HIDDEN_FEATURE_D];
+    t_weight weight_matrix_xg_[INPUT_FEATURE_D][HIDDEN_FEATURE_D];
+    t_weight bias_f_[HIDDEN_FEATURE_D];
+    t_weight bias_i_[HIDDEN_FEATURE_D];
+    t_weight bias_o_[HIDDEN_FEATURE_D];
+    t_weight bias_c_[HIDDEN_FEATURE_D];
 //#pragma HLS dataflow
 #pragma HLS inline off
 #pragma HLS array_partition variable = weight_matrix_hf cyclic dim = 2 factor = 32
@@ -183,12 +197,27 @@ int wrapper_flow(t_feature input_seq[INPUT_SEQUENTIAL_D][INPUT_FEATURE_D],
 #pragma HLS array_partition variable = weight_matrix_xo cyclic dim = 2 factor = 32
 #pragma HLS array_partition variable = weight_matrix_hg cyclic dim = 2 factor = 32
 #pragma HLS array_partition variable = weight_matrix_xg cyclic dim = 2 factor = 32
-#pragma HLS array_partition variable = hidden_state_seq cyclic dim = 2 factor = 32
+#pragma HLS array_partition variable = hidden_state_seq cyclic dim = 1 factor = 32
 
 #pragma HLS array_partition variable = bias_f complete factor = 32
 #pragma HLS array_partition variable = bias_i complete factor = 32
 #pragma HLS array_partition variable = bias_o complete factor = 32
 #pragma HLS array_partition variable = bias_c complete factor = 32
+#pragma HLS array_partition variable = weight_matrix_hf_ cyclic dim = 2 factor = 32
+#pragma HLS array_partition variable = weight_matrix_xf_ cyclic dim = 2 factor = 32
+#pragma HLS array_partition variable = weight_matrix_hi_ cyclic dim = 2 factor = 32
+#pragma HLS array_partition variable = weight_matrix_xi_ cyclic dim = 2 factor = 32
+#pragma HLS array_partition variable = weight_matrix_ho_ cyclic dim = 2 factor = 32
+#pragma HLS array_partition variable = weight_matrix_xo_ cyclic dim = 2 factor = 32
+#pragma HLS array_partition variable = weight_matrix_hg_ cyclic dim = 2 factor = 32
+#pragma HLS array_partition variable = weight_matrix_xg_ cyclic dim = 2 factor = 32
+
+#pragma HLS array_partition variable = bias_f_ complete factor = 32
+#pragma HLS array_partition variable = bias_i_ complete factor = 32
+#pragma HLS array_partition variable = bias_o_ complete factor = 32
+#pragma HLS array_partition variable = bias_c_ complete factor = 32
+#pragma HLS array_partition variable = input_seq_buf cyclic dim = 1 factor = 32
+#pragma HLS array_partition variable = cell_state_seq cyclic dim = 1 factor = 32
 // version keep 2 cells 
     LSTM_cell(
         input_seq[0],
@@ -210,11 +239,11 @@ int wrapper_flow(t_feature input_seq[INPUT_SEQUENTIAL_D][INPUT_FEATURE_D],
         cell_state_seq[0]    // next
     );
 LOOP_ALL:
-    for (int i = 1; i < INPUT_SEQUENTIAL_D; i+2) {
-#pragma HLS dataflow
+    for (int i = 1; i < INPUT_SEQUENTIAL_D; i+=2) {
+#pragma HLS pipeline
             // LSTM cell 1
             LSTM_cell(
-                input_seq[i],
+                input_seq_buf[i],
                 hidden_state_seq[i-1],
                 cell_state_seq[i-1],
                 weight_matrix_hf,
@@ -234,7 +263,7 @@ LOOP_ALL:
             );
             // LSTM cell 2
             LSTM_cell(
-                input_seq[i + 1],
+                input_seq_buf[i + 1],
                 hidden_state_seq[i],
                 cell_state_seq[i],
                 weight_matrix_hf,
