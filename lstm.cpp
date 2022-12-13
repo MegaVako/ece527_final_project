@@ -4,11 +4,7 @@
 #include "ap_fixed.h"
 #include "lstm.hpp"
 
-#define INPUT_SEQUENTIAL_D 120
-#define INPUT_FEATURE_D 7
-#define HIDDEN_FEATURE_D 32
-#define PARTITION_DIM
-#define PARTITION_FACTOR
+
 // naiive
 t_feature sigmoid(t_feature input)
 {
@@ -51,7 +47,7 @@ void hidden_to_hidden_dot_product(t_feature h[HIDDEN_FEATURE_D], t_weight U[HIDD
 {
 	H_TO_H : for (int j = 0; j < HIDDEN_FEATURE_D; ++j)
     {
-#pragma HLS PIPELINE
+#pragma HLS PIPELINE rewind
 		H_TO_H_2 : for (int i = 0; i < HIDDEN_FEATURE_D / H_TO_H_UNROLL_RATIO; ++i)
         {
 			H_TO_H_3 : for (int k = 0; k < H_TO_H_UNROLL_RATIO; k++) {
@@ -173,19 +169,7 @@ static void LSTM_cell(t_feature input[INPUT_FEATURE_D],
 // wrapper lstm
 #define CELL_UNROLL_RATIO 2
 int wrapper_flow(t_feature input_seq[INPUT_SEQUENTIAL_D][INPUT_FEATURE_D],
-                 t_feature hidden_state_seq[INPUT_SEQUENTIAL_D][HIDDEN_FEATURE_D],
-                 t_weight weight_matrix_hf[HIDDEN_FEATURE_D][HIDDEN_FEATURE_D],
-                 t_weight weight_matrix_xf[INPUT_FEATURE_D][HIDDEN_FEATURE_D],
-                 t_weight weight_matrix_hi[HIDDEN_FEATURE_D][HIDDEN_FEATURE_D],
-                 t_weight weight_matrix_xi[INPUT_FEATURE_D][HIDDEN_FEATURE_D],
-                 t_weight weight_matrix_ho[HIDDEN_FEATURE_D][HIDDEN_FEATURE_D],
-                 t_weight weight_matrix_xo[INPUT_FEATURE_D][HIDDEN_FEATURE_D],
-                 t_weight weight_matrix_hg[HIDDEN_FEATURE_D][HIDDEN_FEATURE_D],
-                 t_weight weight_matrix_xg[INPUT_FEATURE_D][HIDDEN_FEATURE_D],
-                 t_weight bias_f[HIDDEN_FEATURE_D],
-                 t_weight bias_i[HIDDEN_FEATURE_D],
-                 t_weight bias_o[HIDDEN_FEATURE_D],
-                 t_weight bias_c[HIDDEN_FEATURE_D])
+                 t_feature hidden_state_seq[INPUT_SEQUENTIAL_D][HIDDEN_FEATURE_D])
 {
 
     t_feature cell_state_seq[INPUT_SEQUENTIAL_D][HIDDEN_FEATURE_D];
@@ -245,30 +229,53 @@ int wrapper_flow(t_feature input_seq[INPUT_SEQUENTIAL_D][INPUT_FEATURE_D],
         hidden_state_seq[2],  // next
         cell_state_seq[2]    // next
     );
-    CELL_LOOP_OUTER : for (int j = 1; j < INPUT_SEQUENTIAL_D / CELL_UNROLL_RATIO; j++) {
-		CELL_LOOP_INNER : for (int i = 0; i < CELL_UNROLL_RATIO; i++) {
-			int curr_idx = i + (j*CELL_UNROLL_RATIO) - 1;
-			int next_idx = curr_idx + 1;
-			LSTM_cell(
-				input_seq[curr_idx],
-				hidden_state_seq[curr_idx],
-				cell_state_seq[curr_idx],
-				weight_matrix_hf,
-				weight_matrix_xf,
-				weight_matrix_hi,
-				weight_matrix_xi,
-				weight_matrix_ho,
-				weight_matrix_xo,
-				weight_matrix_hg,
-				weight_matrix_xg,
-				bias_f,
-				bias_i,
-				bias_o,
-				bias_c,
-				hidden_state_seq[next_idx],  // next
-				cell_state_seq[next_idx]    // next
-			);
-		}
-    }
+	CELL_LOOP_INNER : for (int i = 2; i < INPUT_SEQUENTIAL_D; i++) {
+		int curr_idx = i - 1;
+		int next_idx = curr_idx + 1;
+		LSTM_cell(
+			input_seq[curr_idx],
+			hidden_state_seq[curr_idx],
+			cell_state_seq[curr_idx],
+			weight_matrix_hf,
+			weight_matrix_xf,
+			weight_matrix_hi,
+			weight_matrix_xi,
+			weight_matrix_ho,
+			weight_matrix_xo,
+			weight_matrix_hg,
+			weight_matrix_xg,
+			bias_f,
+			bias_i,
+			bias_o,
+			bias_c,
+			hidden_state_seq[next_idx],  // next
+			cell_state_seq[next_idx]    // next
+		);
+	}
+//    CELL_LOOP_OUTER : for (int j = 1; j < INPUT_SEQUENTIAL_D / CELL_UNROLL_RATIO; j++) {
+//		CELL_LOOP_INNER : for (int i = 0; i < CELL_UNROLL_RATIO; i++) {
+//			int curr_idx = i + (j*CELL_UNROLL_RATIO) - 1;
+//			int next_idx = curr_idx + 1;
+//			LSTM_cell(
+//				input_seq[curr_idx],
+//				hidden_state_seq[curr_idx],
+//				cell_state_seq[curr_idx],
+//				weight_matrix_hf,
+//				weight_matrix_xf,
+//				weight_matrix_hi,
+//				weight_matrix_xi,
+//				weight_matrix_ho,
+//				weight_matrix_xo,
+//				weight_matrix_hg,
+//				weight_matrix_xg,
+//				bias_f,
+//				bias_i,
+//				bias_o,
+//				bias_c,
+//				hidden_state_seq[next_idx],  // next
+//				cell_state_seq[next_idx]    // next
+//			);
+//		}
+//    }
     return 0;
 }

@@ -3,9 +3,28 @@
 
 #include "ap_fixed.h"
 
+#define INPUT_SEQUENTIAL_D 120
+#define INPUT_FEATURE_D 7
+#define HIDDEN_FEATURE_D 32
+#define PARTITION_DIM
+#define PARTITION_FACTOR
+
 typedef ap_fixed<8, 2, AP_RND_ZERO, AP_SAT> t_feature;
 typedef ap_fixed<8, 2, AP_RND_ZERO, AP_SAT> t_weight;
 
+
+ t_weight weight_matrix_hf[HIDDEN_FEATURE_D][HIDDEN_FEATURE_D] = {};
+ t_weight weight_matrix_xf[INPUT_FEATURE_D][HIDDEN_FEATURE_D] = {};
+ t_weight weight_matrix_hi[HIDDEN_FEATURE_D][HIDDEN_FEATURE_D] = {};
+ t_weight weight_matrix_xi[INPUT_FEATURE_D][HIDDEN_FEATURE_D] = {};
+ t_weight weight_matrix_ho[HIDDEN_FEATURE_D][HIDDEN_FEATURE_D] = {};
+ t_weight weight_matrix_xo[INPUT_FEATURE_D][HIDDEN_FEATURE_D] = {};
+ t_weight weight_matrix_hg[HIDDEN_FEATURE_D][HIDDEN_FEATURE_D] = {};
+ t_weight weight_matrix_xg[INPUT_FEATURE_D][HIDDEN_FEATURE_D] = {};
+ t_weight bias_f[HIDDEN_FEATURE_D] = {};
+ t_weight bias_i[HIDDEN_FEATURE_D] = {};
+ t_weight bias_o[HIDDEN_FEATURE_D] = {};
+ t_weight bias_c[HIDDEN_FEATURE_D] = {};
 
 t_feature sigmoid_lut[1024] = {
 		0.0024726231566347743,
