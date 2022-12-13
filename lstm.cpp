@@ -32,8 +32,10 @@ t_feature tanh(t_feature input)
 
 void input_to_hidden_dot_product(t_feature x[INPUT_FEATURE_D], t_feature W[INPUT_FEATURE_D][HIDDEN_FEATURE_D], t_feature output[HIDDEN_FEATURE_D])
 {
+DOT_ITH_1:
     for (int i = 0; i < INPUT_FEATURE_D; ++i)
     {
+DOT_ITH_2:
         for (int j = 0; j < HIDDEN_FEATURE_D; ++j)
         {
             output[j] += x[i] * W[i][j];
@@ -43,8 +45,10 @@ void input_to_hidden_dot_product(t_feature x[INPUT_FEATURE_D], t_feature W[INPUT
 
 void hidden_to_hidden_dot_product(t_feature h[HIDDEN_FEATURE_D], t_feature U[HIDDEN_FEATURE_D][HIDDEN_FEATURE_D], t_feature output[HIDDEN_FEATURE_D])
 {
+DOT_HTH_1:
     for (int i = 0; i < HIDDEN_FEATURE_D; ++i)
     {
+DOT_HTH_2:
         for (int j = 0; j < HIDDEN_FEATURE_D; ++j)
         {
             output[i] += h[i] * U[i][j];
@@ -64,7 +68,7 @@ void unified_gate(t_feature W[INPUT_FEATURE_D][HIDDEN_FEATURE_D], t_feature x[IN
 
     input_to_hidden_dot_product(x, W, output_x);
     hidden_to_hidden_dot_product(h, U, output_h);
-
+UNIFIED_LOOP:
     for (int i = 0; i < HIDDEN_FEATURE_D; ++i)
     {
         t_feature tmp_sum = output_x[i] + output_h[i] + bias[i];
@@ -82,7 +86,7 @@ void g_gate(t_feature W[INPUT_FEATURE_D][HIDDEN_FEATURE_D], t_feature x[INPUT_FE
 
     input_to_hidden_dot_product(x, W, output_x);
     hidden_to_hidden_dot_product(h, U, output_h);
-
+G_GATE_LOOP:
     for (int i = 0; i < HIDDEN_FEATURE_D; ++i)
     {
         t_feature tmp_sum = output_x[i] + output_h[i] + bias[i];
@@ -93,6 +97,7 @@ void g_gate(t_feature W[INPUT_FEATURE_D][HIDDEN_FEATURE_D], t_feature x[INPUT_FE
 void cell_out(t_feature forget[HIDDEN_FEATURE_D], t_feature last_c[HIDDEN_FEATURE_D], t_feature input_t[HIDDEN_FEATURE_D], t_feature g_gate[HIDDEN_FEATURE_D],
                t_feature output[HIDDEN_FEATURE_D])
 {
+CELL_LOOP:
     for (int i = 0; i < HIDDEN_FEATURE_D; ++i)
     {
         output[i] = forget[i] * last_c[i] + input_t[i] * g_gate[i];
@@ -101,6 +106,7 @@ void cell_out(t_feature forget[HIDDEN_FEATURE_D], t_feature last_c[HIDDEN_FEATUR
 
 void next_hidden(t_feature output_t[HIDDEN_FEATURE_D], t_feature cell_out_t[HIDDEN_FEATURE_D], t_feature output[HIDDEN_FEATURE_D])
 {
+NEXT_HIDDEN_LOOP:
     for (int i = 0; i < HIDDEN_FEATURE_D; ++i)
     {
         output[i] = output_t[i] * tanh(cell_out_t[i]);
@@ -205,8 +211,8 @@ int wrapper_flow(t_feature input_seq[INPUT_SEQUENTIAL_D][INPUT_FEATURE_D],
         hidden_state_seq[0],  // next
         cell_state_seq[0]    // next
     );
+LOOP_ALL:
     for (int i = 1; i < INPUT_SEQUENTIAL_D; i++) {
-#pragma hls UNROLL
         LSTM_cell(
             input_seq[i],
             hidden_state_seq[i-1],

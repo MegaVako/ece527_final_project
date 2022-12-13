@@ -3,8 +3,8 @@
 
 #include "ap_fixed.h"
 
-typedef ap_fixed<16, 8, AP_RND_ZERO, AP_SAT> t_feature;
-typedef ap_fixed<16, 8, AP_RND_ZERO, AP_SAT> t_weight;
+typedef ap_fixed<8, 2, AP_RND_ZERO, AP_SAT> t_feature;
+typedef ap_fixed<8, 2, AP_RND_ZERO, AP_SAT> t_weight;
 
 
 t_feature sigmoid_lut[1024] = {
