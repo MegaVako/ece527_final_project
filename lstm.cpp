@@ -137,10 +137,7 @@ static void LSTM_cell(t_feature input[INPUT_FEATURE_D],
     t_feature output_g[HIDDEN_FEATURE_D];
     t_feature output_o[HIDDEN_FEATURE_D];
 
-//    unified_gate(t_feature W[INPUT_FEATURE_D][HIDDEN_FEATURE_D], t_feature x[INPUT_FEATURE_D],
-//                      t_feature U[HIDDEN_FEATURE_D][HIDDEN_FEATURE_D], t_feature h[HIDDEN_FEATURE_D],
-//                      t_feature bias[HIDDEN_FEATURE_D],
-//                      t_feature output[HIDDEN_FEATURE_D])
+#pragma HLS inline recursive
     // input gate
     unified_gate(weight_matrix_xi, input, weight_matrix_hi, hidden_state, bias_i, output_i);
     // forget gate
@@ -177,6 +174,7 @@ int wrapper_flow(t_feature input_seq[INPUT_SEQUENTIAL_D][INPUT_FEATURE_D],
     t_feature dummy_hidden[32] = {0};
     t_feature dummy_cell[32] = {0};
 //#pragma HLS dataflow
+#pragma HLS inline off
 #pragma HLS array_partition variable = weight_matrix_hf cyclic dim = 2 factor = 32
 #pragma HLS array_partition variable = weight_matrix_xf cyclic dim = 2 factor = 32
 #pragma HLS array_partition variable = weight_matrix_hi cyclic dim = 2 factor = 32
@@ -191,7 +189,7 @@ int wrapper_flow(t_feature input_seq[INPUT_SEQUENTIAL_D][INPUT_FEATURE_D],
 #pragma HLS array_partition variable = bias_i complete factor = 32
 #pragma HLS array_partition variable = bias_o complete factor = 32
 #pragma HLS array_partition variable = bias_c complete factor = 32
-
+// version keep 2 cells 
     LSTM_cell(
         input_seq[0],
 		dummy_hidden,
@@ -212,26 +210,48 @@ int wrapper_flow(t_feature input_seq[INPUT_SEQUENTIAL_D][INPUT_FEATURE_D],
         cell_state_seq[0]    // next
     );
 LOOP_ALL:
-    for (int i = 1; i < INPUT_SEQUENTIAL_D; i++) {
-        LSTM_cell(
-            input_seq[i],
-            hidden_state_seq[i-1],
-            cell_state_seq[i-1],
-            weight_matrix_hf,
-            weight_matrix_xf,
-            weight_matrix_hi,
-            weight_matrix_xi,
-            weight_matrix_ho,
-            weight_matrix_xo,
-            weight_matrix_hg,
-            weight_matrix_xg,
-            bias_f,
-            bias_i,
-            bias_o,
-            bias_c,
-            hidden_state_seq[i],  // next
-            cell_state_seq[i]    // next
-        );
+    for (int i = 1; i < INPUT_SEQUENTIAL_D; i+2) {
+#pragma HLS dataflow
+            // LSTM cell 1
+            LSTM_cell(
+                input_seq[i],
+                hidden_state_seq[i-1],
+                cell_state_seq[i-1],
+                weight_matrix_hf,
+                weight_matrix_xf,
+                weight_matrix_hi,
+                weight_matrix_xi,
+                weight_matrix_ho,
+                weight_matrix_xo,
+                weight_matrix_hg,
+                weight_matrix_xg,
+                bias_f,
+                bias_i,
+                bias_o,
+                bias_c,
+                hidden_state_seq[i],  // next
+                cell_state_seq[i]    // next
+            );
+            // LSTM cell 2
+            LSTM_cell(
+                input_seq[i + 1],
+                hidden_state_seq[i],
+                cell_state_seq[i],
+                weight_matrix_hf,
+                weight_matrix_xf,
+                weight_matrix_hi,
+                weight_matrix_xi,
+                weight_matrix_ho,
+                weight_matrix_xo,
+                weight_matrix_hg,
+                weight_matrix_xg,
+                bias_f,
+                bias_i,
+                bias_o,
+                bias_c,
+                hidden_state_seq[i + 1],  // next
+                cell_state_seq[i + 1]    // next
+            );
     }
     return 0;
 }
