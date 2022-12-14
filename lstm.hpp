@@ -9,7 +9,7 @@
 #define PARTITION_DIM
 #define PARTITION_FACTOR
 
-typedef ap_fixed<8, 2, AP_RND_ZERO, AP_SAT> t_feature;
+typedef ap_fixed<12, 2, AP_RND_ZERO, AP_SAT> t_feature;
 typedef ap_fixed<8, 2, AP_RND_ZERO, AP_SAT> t_weight;
 
 
